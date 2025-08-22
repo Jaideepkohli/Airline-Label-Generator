@@ -5,24 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Airline Carton Label Generator</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-    .controls { margin-bottom: 20px; }
-    .label {
-      background: #fff; border: 2px solid #000; margin: 10px auto; padding: 15px;
-      box-sizing: border-box; page-break-after: always; display: flex; flex-direction: column; justify-content: space-between;
-    }
-    .label h2 { margin: 0 0 10px; font-size: 28px; text-align: center; border-bottom: 2px solid #000; padding-bottom: 5px; }
-    .section { border: 1px solid #000; padding: 8px; margin-bottom: 6px; }
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
+    header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    header img { height: 40px; }
+    h1 { font-size: 20px; color: #003366; margin: 0; }
+    .controls { margin-bottom: 20px; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
+    label { font-weight: bold; margin-top: 10px; display: inline-block; color: #333; }
+    input, select, button { margin-top: 6px; padding: 8px 12px; font-size: 14px; border-radius: 6px; border: 1px solid #ccc; }
+    button { cursor: pointer; background: #003366; color: #fff; border: none; }
+    button:hover { background: #0055aa; }
+    .label { background: #fff; border: 2px solid #003366; margin: 10px auto; padding: 15px; box-sizing: border-box; page-break-after: always; display: flex; flex-direction: column; justify-content: space-between; }
+    .label h2 { margin: 0 0 10px; font-size: 28px; text-align: center; border-bottom: 2px solid #003366; padding-bottom: 5px; color: #003366; }
+    .section { border: 1px solid #003366; padding: 8px; margin-bottom: 6px; }
     .field { margin-bottom: 4px; font-size: 14px; }
     .field strong { display: inline-block; width: 160px; }
-    .barcode { margin-top: 10px; text-align: center; border: 1px solid #000; padding: 5px; }
+    .barcode { margin-top: 10px; text-align: center; border: 1px solid #003366; padding: 5px; }
     @media print { body { background: #fff; } .controls { display: none; } }
   </style>
 </head>
 <body>
+  <header>
+    <img src="https://www.xindus.net/wp-content/uploads/2023/07/logo.svg" alt="Xindus Logo">
+    <h1>Airline Carton Label Generator</h1>
+  </header>
+
   <div class="controls">
-    <h1>✈️ Airline Carton Label Generator</h1>
+    <label for="file">Choose File:</label>
     <input type="file" id="file" accept=".xlsx,.xls,.csv" />
+    <button id="download-template">⬇️ Download Template</button>
+
     <label for="size">Label Size:</label>
     <select id="size">
       <option value="4x6">4 x 6 in</option>
@@ -30,11 +41,11 @@
       <option value="3x5">3 x 5 in</option>
       <option value="A6">A6 (105 x 148 mm)</option>
     </select>
+
     <button id="generate">Generate Labels</button>
     <button onclick="window.print()">🖨️ Print</button>
     <button id="pdf">⬇️ Download PDF</button>
     <button id="png">⬇️ Download PNG (Zip)</button>
-    <button id="download-template">⬇️ Download Template</button>
   </div>
 
   <div id="output"></div>
