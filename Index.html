@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Airline Carton Label Generator</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+    .controls { margin-bottom: 20px; }
+    .label {
+      background: #fff; border: 2px solid #000; margin: 10px auto; padding: 15px;
+      box-sizing: border-box; page-break-after: always; display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .label h2 { margin: 0 0 10px; font-size: 28px; text-align: center; border-bottom: 2px solid #000; padding-bottom: 5px; }
+    .section { border: 1px solid #000; padding: 8px; margin-bottom: 6px; }
+    .field { margin-bottom: 4px; font-size: 14px; }
+    .field strong { display: inline-block; width: 160px; }
+    .barcode { margin-top: 10px; text-align: center; border: 1px solid #000; padding: 5px; }
+    @media print { body { background: #fff; } .controls { display: none; } }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <h1>✈️ Airline Carton Label Generator</h1>
+    <input type="file" id="file" accept=".xlsx,.xls,.csv" />
+    <label for="size">Label Size:</label>
+    <select id="size">
+      <option value="4x6">4 x 6 in</option>
+      <option value="4x4">4 x 4 in</option>
+      <option value="3x5">3 x 5 in</option>
+      <option value="A6">A6 (105 x 148 mm)</option>
+    </select>
+    <button id="generate">Generate Labels</button>
+    <button onclick="window.print()">🖨️ Print</button>
+    <button id="pdf">⬇️ Download PDF</button>
+    <button id="png">⬇️ Download PNG (Zip)</button>
+    <button id="download-template">⬇️ Download Template</button>
+  </div>
+
+  <div id="output"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
+  <script>
+    const state = { rows: [], labelSize: { w: 4, h: 6, unit: 'in' } };
+
+    function parseFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const wb = XLSX.read(reader.result, { type: 'array' });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+            resolve(rows);
+          } catch (e) { reject(e); }
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    function padNumber(num, size = 5) {
+      let s = String(num);
+      while (s.length < size) s = "0" + s;
+      return s;
+    }
+
+    function labelHTML(row, cartonNo, totalCartons, globalIndex, paddedNo) {
+      return `
+        <div class="label" style="width:${state.labelSize.w}${state.labelSize.unit}; height:${state.labelSize.h}${state.labelSize.unit}">
+          <h2>${row.Airline || ''}</h2>
+          <div class="section">
+            <div class="field"><strong>Air Waybill Number:</strong> ${row.MAWB || ''}</div>
+            <div class="field"><strong>House Waybill Number:</strong> ${row.HAWB || ''}</div>
+            <div class="field"><strong>Destination:</strong> ${row.Destination || ''}</div>
+            <div class="field"><strong>Departure:</strong> ${row.Origin || ''}</div>
+            <div class="field"><strong>Total Pieces:</strong> ${row.TotalPieces || ''}</div>
+            <div class="field"><strong>Total Weight:</strong> ${row.TotalWeight || ''}</div>
+            <div class="field"><strong>Total HAWB Pieces:</strong> ${row.HAWBPieces || ''}</div>
+          </div>
+          <div class="barcode"><svg id="bc${globalIndex}"></svg></div>
+        </div>
+      `;
+    }
+
+    function generateLabels(rows) {
+      const output = document.getElementById('output');
+      output.innerHTML = '';
+      let globalIndex = 0;
+      rows.forEach((row) => {
+        const totalCartons = parseInt(row.HAWBPieces || row.TotalPieces || 1, 10);
+        for (let i = 1; i <= totalCartons; i++) {
+          const paddedNo = padNumber(i);
+          const div = document.createElement('div');
+          div.innerHTML = labelHTML(row, i, totalCartons, globalIndex, paddedNo);
+          output.appendChild(div);
+          JsBarcode(`#bc${globalIndex}`, `${row.HAWB || row.MAWB}${paddedNo}`, { format: 'CODE128', width: 1.5, height: 50, displayValue: true, fontSize: 14, margin: 0 });
+          globalIndex++;
+        }
+      });
+    }
+
+    document.getElementById('file').addEventListener('change', async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      state.rows = await parseFile(file);
+    });
+
+    document.getElementById('size').addEventListener('change', e => {
+      const val = e.target.value;
+      if (val === '4x6') state.labelSize = { w: 4, h: 6, unit: 'in' };
+      if (val === '4x4') state.labelSize = { w: 4, h: 4, unit: 'in' };
+      if (val === '3x5') state.labelSize = { w: 3, h: 5, unit: 'in' };
+      if (val === 'A6') state.labelSize = { w: 105, h: 148, unit: 'mm' };
+    });
+
+    document.getElementById('generate').addEventListener('click', () => {
+      if (!state.rows.length) { alert('Upload file first'); return; }
+      generateLabels(state.rows);
+    });
+
+    document.getElementById('pdf').addEventListener('click', async () => {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: state.labelSize.unit, format: [state.labelSize.w, state.labelSize.h] });
+      const labels = document.querySelectorAll('.label');
+      for (let i = 0; i < labels.length; i++) {
+        const canvas = await html2canvas(labels[i], { scale: 2 });
+        const img = canvas.toDataURL('image/png');
+        if (i > 0) pdf.addPage([state.labelSize.w, state.labelSize.h], 'portrait');
+        pdf.addImage(img, 'PNG', 0, 0, state.labelSize.w, state.labelSize.h);
+      }
+      pdf.save('carton_labels.pdf');
+    });
+
+    document.getElementById('png').addEventListener('click', async () => {
+      const zip = new JSZip();
+      const labels = document.querySelectorAll('.label');
+      for (let i = 0; i < labels.length; i++) {
+        const canvas = await html2canvas(labels[i], { scale: 2 });
+        const img = canvas.toDataURL('image/png');
+        zip.file(`label_${i+1}.png`, img.split('base64,')[1], { base64: true });
+      }
+      const content = await zip.generateAsync({ type: 'blob' });
+      saveAs(content, 'carton_labels.zip');
+    });
+
+    document.getElementById('download-template').addEventListener('click', () => {
+      const headers = ['Airline','MAWB','HAWB','Origin','Destination','TotalPieces','TotalWeight','HAWBPieces'];
+      const example = ['Virgin Atlantic','932-77253271','X000598770','DEL','JFK','211','2096 K','7'];
+      const csv = [headers.join(','), example.join(',')].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'carton_label_template.csv'; a.click();
+    });
+  </script>
+</body>
+</html>
