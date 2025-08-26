@@ -110,7 +110,7 @@
           const div = document.createElement('div');
           div.innerHTML = labelHTML(row, i, totalCartons, globalIndex, paddedNo);
           output.appendChild(div);
-          JsBarcode(`#bc${globalIndex}`, `${row.HAWB || row.MAWB}${paddedNo}`, { format: 'CODE128', width: 1.5, height: 50, displayValue: true, fontSize: 14, margin: 0 });
+          JsBarcode(`#bc${globalIndex}`, `${row.MAWB}${padNumber(globalIndex + 1)}`, { format: 'CODE128', width: 1.5, height: 50, displayValue: true, fontSize: 14, margin: 0 });
           globalIndex++;
         }
       });
@@ -172,4 +172,5 @@
   </script>
 </body>
 </html>
+
 
